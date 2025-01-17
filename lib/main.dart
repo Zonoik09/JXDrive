@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'mainCanvas.dart'; // Importa tu clase personalizada MainCanvas
+import 'mainCanvas.dart';
+import 'connection.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,9 +19,16 @@ class _MyAppState extends State<MyApp> {
   final bool _isHovered = false;
   bool _isFocused = false;
 
+  // Agregar una referencia para la conexión
+  late final Connection? _connection;
+
   @override
   void initState() {
     super.initState();
+
+    // Inicializar la conexión automáticamente
+    _connection = Connection();
+
     // Detectar el enfoque del TextField
     _focusNode.addListener(() {
       setState(() {
@@ -31,6 +39,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    // Cerrar la conexión si fue creada
+    _connection?.disconnect();
+
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -55,7 +66,8 @@ class _MyAppState extends State<MyApp> {
                         child: const Align(
                           alignment: Alignment.topCenter,
                           child: Padding(
-                            padding: EdgeInsets.only(top: 10), // Espaciado superior
+                            padding:
+                                EdgeInsets.only(top: 10), // Espaciado superior
                             child: Text(
                               "SERVIDORS FAVORITS",
                               style: TextStyle(
@@ -91,7 +103,9 @@ class _MyAppState extends State<MyApp> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20), // Espaciado entre el título y el lienzo
+                            const SizedBox(
+                                height:
+                                    20), // Espaciado entre el título y el lienzo
                             // Usamos Stack para superponer CustomPaint y el TextField
                             Stack(
                               children: [
@@ -127,7 +141,8 @@ class _MyAppState extends State<MyApp> {
                                   child: GestureDetector(
                                     onTap: () {
                                       // Dar foco al TextField cuando el usuario haga clic sobre él
-                                      FocusScope.of(context).requestFocus(_focusNode);
+                                      FocusScope.of(context)
+                                          .requestFocus(_focusNode);
                                     },
                                     child: TextField(
                                       controller: _controller,
@@ -136,7 +151,8 @@ class _MyAppState extends State<MyApp> {
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),
                                         hintText: 'Introduce tu nombre',
-                                        hintStyle: TextStyle(color: Colors.grey),
+                                        hintStyle:
+                                            TextStyle(color: Colors.grey),
                                       ),
                                       onChanged: (text) {
                                         setState(() {});
@@ -160,4 +176,3 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
