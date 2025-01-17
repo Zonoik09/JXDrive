@@ -11,7 +11,7 @@ class Connection {
   // Inicializa la conexión con el servidor
   void _initializeConnection() {
     _socket = IO.io(
-      'http://localhost:3000', // Cambia esta URL por la de tu servidor
+      'http://localhost:3000',
       IO.OptionBuilder().setTransports(['websocket']) // Usar WebSocket
           .build(),
     );

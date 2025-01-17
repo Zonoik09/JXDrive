@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'mainCanvas.dart';
-import 'connection.dart';
+import 'connection.dart'; // Asegúrate de importar la clase Connection
 
 void main() {
   runApp(const MyApp());
@@ -14,37 +14,52 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-  final bool _isHovered = false;
-  bool _isFocused = false;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _serverController = TextEditingController();
+  final TextEditingController _portController = TextEditingController();
+  final TextEditingController _keyController = TextEditingController();
 
-  // Agregar una referencia para la conexión
-  late final Connection? _connection;
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _serverFocusNode = FocusNode();
+  final FocusNode _portFocusNode = FocusNode();
+  final FocusNode _keyFocusNode = FocusNode();
 
-  @override
-  void initState() {
-    super.initState();
-
-    // Inicializar la conexión automáticamente
-    _connection = Connection();
-
-    // Detectar el enfoque del TextField
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-    });
-  }
+  // Instancia de la clase Connection
+  late Connection connection;
+  bool isConnected = false;
 
   @override
   void dispose() {
-    // Cerrar la conexión si fue creada
-    _connection?.disconnect();
-
-    _controller.dispose();
-    _focusNode.dispose();
+    // Limpiar los controladores y focus nodes al cerrar la app
+    _nameController.dispose();
+    _serverController.dispose();
+    _portController.dispose();
+    _keyController.dispose();
+    _nameFocusNode.dispose();
+    _serverFocusNode.dispose();
+    _portFocusNode.dispose();
+    _keyFocusNode.dispose();
     super.dispose();
+  }
+
+  // Función para manejar la conexión
+  void connect() {
+    setState(() {
+      connection = Connection(); // Iniciar la conexión
+      isConnected = true;
+    });
+  }
+
+  // Función para manejar la desconexión
+  void disconnect() {
+    setState(() {
+      connection.disconnect(); // Desconectar
+      isConnected = false;
+      _nameController.clear();
+      _serverController.clear();
+      _portController.clear();
+      _keyController.clear();
+    });
   }
 
   @override
@@ -104,63 +119,55 @@ class _MyAppState extends State<MyApp> {
                               ),
                             ),
                             const SizedBox(
-                                height:
-                                    20), // Espaciado entre el título y el lienzo
-                            // Usamos Stack para superponer CustomPaint y el TextField
-                            Stack(
-                              children: [
-                                const Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(left: 20, top: 10),
-                                    child: Text(
-                                      "NOM:",
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                              height: 80,
+                            ), // Espaciado entre el título y los elementos
+                            // CustomWidgets debajo del título
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 160.0),
+                              child: Column(
+                                children: [
+                                  CustomTextFieldWidget(
+                                    labelText: "Nom:",
+                                    controller: _nameController,
+                                    focusNode: _nameFocusNode,
                                   ),
-                                ),
-                                // CustomPaint con MainCanvas
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 100,
-                                  child: CustomPaint(
-                                    painter: MainCanvas(
-                                      isHovered: _isHovered,
-                                      isFocused: _isFocused,
-                                    ),
+                                  const SizedBox(height: 30),
+                                  CustomTextFieldWidget(
+                                    labelText: "Servidor:",
+                                    controller: _serverController,
+                                    focusNode: _serverFocusNode,
                                   ),
-                                ),
-                                Positioned(
-                                  top: 10,
-                                  left: 200,
-                                  right: 10,
-                                  bottom: 10,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      // Dar foco al TextField cuando el usuario haga clic sobre él
-                                      FocusScope.of(context)
-                                          .requestFocus(_focusNode);
-                                    },
-                                    child: TextField(
-                                      controller: _controller,
-                                      focusNode: _focusNode,
-                                      style: const TextStyle(fontSize: 16),
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'Introduce tu nombre',
-                                        hintStyle:
-                                            TextStyle(color: Colors.grey),
-                                      ),
-                                      onChanged: (text) {
-                                        setState(() {});
-                                      },
-                                    ),
+                                  const SizedBox(height: 30),
+                                  CustomTextFieldWidget(
+                                    labelText: "Port:",
+                                    controller: _portController,
+                                    focusNode: _portFocusNode,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 30),
+                                  CustomTextFieldWidget(
+                                    labelText: "Clau:",
+                                    controller: _keyController,
+                                    focusNode: _keyFocusNode,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                            // Botón para conectar
+                            ElevatedButton(
+                              onPressed: isConnected
+                                  ? null
+                                  : connect, // Siempre se puede conectar
+                              child: const Text("Connectar"),
+                            ),
+                            const SizedBox(height: 10),
+                            // Botón para desconectar
+                            ElevatedButton(
+                              onPressed: isConnected
+                                  ? disconnect
+                                  : null, // Se puede desconectar si está conectado
+                              child: const Text("Desconnectar"),
                             ),
                           ],
                         ),
