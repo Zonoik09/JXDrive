@@ -8,14 +8,14 @@ class CustomTextFieldWidget extends StatelessWidget {
   final bool isHovered;
   final bool isFocused;
 
-  CustomTextFieldWidget({
-    Key? key,
+  const CustomTextFieldWidget({
+    super.key,
     required this.labelText,
     required this.controller,
     required this.focusNode,
     this.isHovered = false,
     this.isFocused = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +63,10 @@ class FilePickerFieldWidget extends StatefulWidget {
   final String labelText;
 
   const FilePickerFieldWidget({
-    Key? key,
+    super.key,
     required this.labelText,
     required Null Function(dynamic path) onFileSelected,
-  }) : super(key: key);
+  });
 
   @override
   _FilePickerFieldWidgetState createState() => _FilePickerFieldWidgetState();

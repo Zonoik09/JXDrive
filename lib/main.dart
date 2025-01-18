@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jxdrive/SaveServer.dart';
-import 'mainCanvas.dart';
 import 'connection.dart';
-import 'SaveServer.dart';
+import 'mainCanvas.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,15 +39,15 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
   }
 
-  // Función para manejar la conexión
   void connect() {
     String name = _nameController.text.trim();
     String server = _serverController.text.trim();
     String port = _portController.text.trim();
     String key = _keyController.text.trim();
 
-    if (name.isEmpty || server.isEmpty || port.isEmpty || key.isEmpty) {
-      _showErrorDialog("Faltan datos", "Por favor, rellena todos los campos.");
+    if (name.isEmpty || server.isEmpty || port.isEmpty) {
+      _showErrorDialog(
+          "Faltan datos", "Por favor, rellena todos los campos obligatorios.");
       return;
     }
 
@@ -56,7 +55,12 @@ class _MyAppState extends State<MyApp> {
       isConnected = true;
     });
 
-    _showSuccessDialog("Conexión exitosa", "Todos los datos están completos.");
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const Vista2(),
+      ),
+    );
   }
 
   void addUserToFavorites() {
@@ -65,36 +69,32 @@ class _MyAppState extends State<MyApp> {
     String port = _portController.text.trim();
     String key = _keyController.text.trim();
 
+    if (name.isEmpty || server.isEmpty || port.isEmpty) {
+      _showErrorDialog(
+          "Faltan datos", "Por favor, rellena todos los campos obligatorios.");
+      return;
+    }
+
     final newUser = UserData(name: name, server: server, port: port, key: key);
+
+    if (userDataList.any(
+        (user) => user.name == newUser.name && user.server == newUser.server)) {
+      _showErrorDialog("Duplicado", "Este servidor ya está en favoritos.");
+      return;
+    }
+
     userDataList.add(newUser);
-
     Storage.saveUserData(userDataList);
-    _loadUserData(); // Recargar los datos
+    _loadUserData();
   }
 
-  // Función para mostrar un mensaje de error
+  void removeUserFromFavorites(int index) {
+    userDataList.removeAt(index);
+    Storage.saveUserData(userDataList);
+    _loadUserData();
+  }
+
   void _showErrorDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Función para mostrar un mensaje de éxito
-  void _showSuccessDialog(String title, String message) {
     showDialog(
       context: context,
       builder: (context) {
@@ -125,33 +125,57 @@ class _MyAppState extends State<MyApp> {
               Expanded(
                 child: Row(
                   children: [
-                    // Panel izquierdo (1/4 de pantalla)
                     Expanded(
                       flex: 1,
                       child: Container(
                         color: const Color(0xFFF9F2FA),
-                        child: const Align(
-                          alignment: Alignment.topCenter,
-                          child: Padding(
-                            padding:
-                                EdgeInsets.only(top: 10), // Espaciado superior
-                            child: Text(
-                              "SERVIDORS FAVORITS",
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 10),
+                              child: Text(
+                                "SERVIDORS FAVORITS",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: userDataList.length,
+                                itemBuilder: (context, index) {
+                                  final user = userDataList[index];
+                                  return ListTile(
+                                    title: Text(user.name),
+                                    subtitle:
+                                        Text('${user.server}:${user.port}'),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () =>
+                                          removeUserFromFavorites(index),
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        _nameController.text = user.name;
+                                        _serverController.text = user.server;
+                                        _portController.text = user.port;
+                                        _keyController.text = user.key;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    // Línea negra de separación
                     Container(
                       width: 3,
                       color: Colors.black,
                     ),
-                    // Panel derecho (3/4 de pantalla)
                     Expanded(
                       flex: 3,
                       child: Container(
@@ -159,7 +183,6 @@ class _MyAppState extends State<MyApp> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Título "CONFIGURACIÓ SSH"
                             const Padding(
                               padding: EdgeInsets.only(top: 10, left: 40),
                               child: Text(
@@ -170,10 +193,7 @@ class _MyAppState extends State<MyApp> {
                                 ),
                               ),
                             ),
-                            const SizedBox(
-                              height: 80,
-                            ), // Espaciado entre el título y los elementos
-                            // CustomWidgets debajo del título
+                            const SizedBox(height: 80),
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 160.0),
@@ -206,25 +226,14 @@ class _MyAppState extends State<MyApp> {
                                     },
                                   ),
                                   const SizedBox(height: 50),
-                                  // Botones adicionales en la misma fila
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      // Botón de borrar de favoritos (papelera)
-                                      IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        onPressed: () {
-                                          // Acción para borrar de favoritos
-                                        },
-                                      ),
-                                      const SizedBox(width: 20), // Espaciado
-                                      // Botón de añadir a favoritos (estrella)
                                       CustomButton(
                                         label: "Afegir a favorits",
                                         onPressed: addUserToFavorites,
                                       ),
-                                      const SizedBox(width: 20), // Espaciado
-                                      // Botón de conectar
+                                      const SizedBox(width: 20),
                                       CustomButton(
                                         label: "Conectar",
                                         onPressed: connect,
@@ -232,24 +241,6 @@ class _MyAppState extends State<MyApp> {
                                     ],
                                   ),
                                 ],
-                              ),
-                            ),
-                            // ListView debajo de "SERVIDORS FAVORITS"
-                            Padding(
-                              padding: const EdgeInsets.only(top: 30),
-                              child: SizedBox(
-                                height: 200, // Ajusta la altura del ListView
-                                child: ListView.builder(
-                                  itemCount: userDataList.length,
-                                  itemBuilder: (context, index) {
-                                    final user = userDataList[index];
-                                    return ListTile(
-                                      title: Text(user.name),
-                                      subtitle:
-                                          Text('${user.server}:${user.port}'),
-                                    );
-                                  },
-                                ),
                               ),
                             ),
                           ],
@@ -262,6 +253,20 @@ class _MyAppState extends State<MyApp> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class Vista2 extends StatelessWidget {
+  const Vista2({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Vista 2")),
+      body: const Center(
+        child: Text("Conectado al servidor"),
       ),
     );
   }

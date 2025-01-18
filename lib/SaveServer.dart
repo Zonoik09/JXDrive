@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path_provider/path_provider.dart'; // Asegúrate de importar esto
+import 'package:path_provider/path_provider.dart';
 
 class UserData {
   final String name;
@@ -16,7 +16,6 @@ class UserData {
     required this.key,
   });
 
-  // Convertir un objeto UserData en un mapa (JSON)
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -26,7 +25,6 @@ class UserData {
     };
   }
 
-  // Crear un objeto UserData a partir de un mapa (JSON)
   static UserData fromJson(Map<String, dynamic> json) {
     return UserData(
       name: json['name'],
@@ -38,35 +36,45 @@ class UserData {
 }
 
 class Storage {
-  // Obtiene la ruta del archivo en el directorio de documentos de la aplicación
   static Future<String> _getFilePath() async {
     final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/user_data.json';
+    return '${directory.path}/JXDrive/user_data.json';
   }
 
-  // Cargar los datos de usuario desde el archivo JSON
   static Future<List<UserData>> loadUserData() async {
-    final filePath = await _getFilePath();
-    final file = File(filePath);
+    try {
+      final filePath = await _getFilePath();
+      final file = File(filePath);
 
-    if (!file.existsSync()) {
-      return []; // Si no existe el archivo, retornamos una lista vacía
+      if (!file.existsSync()) {
+        return [];
+      }
+
+      final content = await file.readAsString();
+      final List<dynamic> jsonData = jsonDecode(content);
+
+      return jsonData.map((data) => UserData.fromJson(data)).toList();
+    } catch (e) {
+      print("Error al cargar los datos: $e");
+      return [];
     }
-
-    final content = await file.readAsString();
-    final List<dynamic> jsonData = jsonDecode(content);
-
-    return jsonData.map((data) => UserData.fromJson(data)).toList();
   }
 
-  // Guardar los datos de usuario en el archivo JSON
   static Future<void> saveUserData(List<UserData> users) async {
-    final filePath = await _getFilePath();
-    final file = File(filePath);
+    try {
+      final filePath = await _getFilePath();
+      final file = File(filePath);
 
-    final List<Map<String, dynamic>> jsonData =
-        users.map((user) => user.toJson()).toList();
+      if (!file.existsSync()) {
+        await file.create(recursive: true);
+      }
 
-    await file.writeAsString(jsonEncode(jsonData));
+      final List<Map<String, dynamic>> jsonData =
+          users.map((user) => user.toJson()).toList();
+
+      await file.writeAsString(jsonEncode(jsonData));
+    } catch (e) {
+      print("Error al guardar los datos: $e");
+    }
   }
 }
