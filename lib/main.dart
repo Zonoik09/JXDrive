@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:jxdrive/SaveServer.dart';
 import 'mainCanvas.dart';
-import 'connection.dart'; // Asegúrate de importar la clase Connection
+import 'connection.dart';
+import 'SaveServer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,42 +26,92 @@ class _MyAppState extends State<MyApp> {
   final FocusNode _portFocusNode = FocusNode();
   final FocusNode _keyFocusNode = FocusNode();
 
-  // Instancia de la clase Connection
-  late Connection connection;
   bool isConnected = false;
+  List<UserData> userDataList = [];
 
   @override
-  void dispose() {
-    // Limpiar los controladores y focus nodes al cerrar la app
-    _nameController.dispose();
-    _serverController.dispose();
-    _portController.dispose();
-    _keyController.dispose();
-    _nameFocusNode.dispose();
-    _serverFocusNode.dispose();
-    _portFocusNode.dispose();
-    _keyFocusNode.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() async {
+    userDataList = await Storage.loadUserData();
+    setState(() {});
   }
 
   // Función para manejar la conexión
   void connect() {
+    String name = _nameController.text.trim();
+    String server = _serverController.text.trim();
+    String port = _portController.text.trim();
+    String key = _keyController.text.trim();
+
+    if (name.isEmpty || server.isEmpty || port.isEmpty || key.isEmpty) {
+      _showErrorDialog("Faltan datos", "Por favor, rellena todos los campos.");
+      return;
+    }
+
     setState(() {
-      connection = Connection(); // Iniciar la conexión
       isConnected = true;
     });
+
+    _showSuccessDialog("Conexión exitosa", "Todos los datos están completos.");
   }
 
-  // Función para manejar la desconexión
-  void disconnect() {
-    setState(() {
-      connection.disconnect(); // Desconectar
-      isConnected = false;
-      _nameController.clear();
-      _serverController.clear();
-      _portController.clear();
-      _keyController.clear();
-    });
+  void addUserToFavorites() {
+    String name = _nameController.text.trim();
+    String server = _serverController.text.trim();
+    String port = _portController.text.trim();
+    String key = _keyController.text.trim();
+
+    final newUser = UserData(name: name, server: server, port: port, key: key);
+    userDataList.add(newUser);
+
+    Storage.saveUserData(userDataList);
+    _loadUserData(); // Recargar los datos
+  }
+
+  // Función para mostrar un mensaje de error
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Función para mostrar un mensaje de éxito
+  void _showSuccessDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -145,29 +197,60 @@ class _MyAppState extends State<MyApp> {
                                     focusNode: _portFocusNode,
                                   ),
                                   const SizedBox(height: 30),
-                                  CustomTextFieldWidget(
+                                  FilePickerFieldWidget(
                                     labelText: "Clau:",
-                                    controller: _keyController,
-                                    focusNode: _keyFocusNode,
+                                    onFileSelected: (path) {
+                                      setState(() {
+                                        _keyController.text = path;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 50),
+                                  // Botones adicionales en la misma fila
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Botón de borrar de favoritos (papelera)
+                                      IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () {
+                                          // Acción para borrar de favoritos
+                                        },
+                                      ),
+                                      const SizedBox(width: 20), // Espaciado
+                                      // Botón de añadir a favoritos (estrella)
+                                      CustomButton(
+                                        label: "Afegir a favorits",
+                                        onPressed: addUserToFavorites,
+                                      ),
+                                      const SizedBox(width: 20), // Espaciado
+                                      // Botón de conectar
+                                      CustomButton(
+                                        label: "Conectar",
+                                        onPressed: connect,
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 30),
-                            // Botón para conectar
-                            ElevatedButton(
-                              onPressed: isConnected
-                                  ? null
-                                  : connect, // Siempre se puede conectar
-                              child: const Text("Connectar"),
-                            ),
-                            const SizedBox(height: 10),
-                            // Botón para desconectar
-                            ElevatedButton(
-                              onPressed: isConnected
-                                  ? disconnect
-                                  : null, // Se puede desconectar si está conectado
-                              child: const Text("Desconnectar"),
+                            // ListView debajo de "SERVIDORS FAVORITS"
+                            Padding(
+                              padding: const EdgeInsets.only(top: 30),
+                              child: SizedBox(
+                                height: 200, // Ajusta la altura del ListView
+                                child: ListView.builder(
+                                  itemCount: userDataList.length,
+                                  itemBuilder: (context, index) {
+                                    final user = userDataList[index];
+                                    return ListTile(
+                                      title: Text(user.name),
+                                      subtitle:
+                                          Text('${user.server}:${user.port}'),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ],
                         ),
