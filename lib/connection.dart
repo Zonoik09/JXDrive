@@ -28,7 +28,7 @@ class Connection {
         IO.OptionBuilder()
             .setTransports(['websocket']) // Usar solo WebSocket
             .enableForceNew() // Crear una nueva conexión
-            .setExtraHeaders({'Authorization': key ?? ''}) // Cabecera opcional
+            .setExtraHeaders({'Authorization': key ?? ''}) // opcional
             .build(),
       );
 
@@ -37,21 +37,6 @@ class Connection {
         _isConnected = true;
         onSuccess(); // Llamar al callback de éxito
         print('Conectado al servidor: $url');
-      });
-
-      // Evento de desconexión
-      _socket.onDisconnect((_) {
-        _isConnected = false;
-        print('Desconectado del servidor');
-      });
-
-      // Manejar errores de conexión
-      _socket.onConnectError((data) {
-        onError('Error al conectar: $data');
-      });
-
-      _socket.onError((data) {
-        onError('Error del servidor: $data');
       });
     } catch (e) {
       onError('Error al intentar conectarse: $e');
