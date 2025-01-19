@@ -8,68 +8,56 @@ class Connection {
 
   Connection();
 
-  // Método para inicializar la conexión
   void connect({
     required String server,
     required String port,
     String? key,
+    required Function(String) onError, // Callback para errores
+    required Function onSuccess, // Callback para éxito
   }) {
     if (server.isEmpty || port.isEmpty) {
-      throw ArgumentError("El servidor y el puerto son obligatorios.");
+      onError("El servidor y el puerto son obligatorios.");
+      return;
     }
 
-    final url = 'http://$server:$port';
+    final url = '$server:$port';
 
     try {
       _socket = IO.io(
         url,
         IO.OptionBuilder()
-            .setTransports(['websocket']) // Usar WebSocket
+            .setTransports(['websocket']) // Usar solo WebSocket
             .enableForceNew() // Crear una nueva conexión
-            .setExtraHeaders(
-                {'Authorization': key ?? ''}) // Enviar clave si existe
+            .setExtraHeaders({'Authorization': key ?? ''}) // Cabecera opcional
             .build(),
       );
 
+      // Evento de conexión exitosa
       _socket.onConnect((_) {
         _isConnected = true;
-        print('Conectado al servidor $url');
+        onSuccess(); // Llamar al callback de éxito
+        print('Conectado al servidor: $url');
       });
 
+      // Evento de desconexión
       _socket.onDisconnect((_) {
         _isConnected = false;
-        print('Desconectado del servidor $url');
+        print('Desconectado del servidor');
       });
 
-      _socket.on('error', (data) {
-        print('Error del servidor: $data');
+      // Manejar errores de conexión
+      _socket.onConnectError((data) {
+        onError('Error al conectar: $data');
+      });
+
+      _socket.onError((data) {
+        onError('Error del servidor: $data');
       });
     } catch (e) {
-      print('Error al intentar conectarse al servidor: $e');
-      _isConnected = false;
+      onError('Error al intentar conectarse: $e');
     }
   }
 
-  // Método para enviar un mensaje al servidor
-  void sendMessage(String event, dynamic data) {
-    if (_isConnected) {
-      _socket.emit(event, data);
-      print('Mensaje enviado: $data');
-    } else {
-      print('No se puede enviar el mensaje: No conectado al servidor');
-    }
-  }
-
-  // Método para escuchar eventos personalizados
-  void onEvent(String event, Function(dynamic) handler) {
-    if (_isConnected) {
-      _socket.on(event, handler);
-    } else {
-      print('No se puede registrar el evento: No conectado al servidor');
-    }
-  }
-
-  // Método para desconectarse del servidor
   void disconnect() {
     if (_isConnected) {
       _socket.disconnect();

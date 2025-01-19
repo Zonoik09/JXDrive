@@ -1,6 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jxdrive/SaveServer.dart';
-import 'connection.dart';
+import 'package:jxdrive/connection.dart';
 import 'mainCanvas.dart';
 
 void main() {
@@ -27,6 +28,8 @@ class _MyAppState extends State<MyApp> {
 
   bool isConnected = false;
   List<UserData> userDataList = [];
+  String? _message; // Mensaje de error o éxito
+  bool _isError = false; // Determina si el mensaje es un error o éxito
 
   @override
   void initState() {
@@ -45,21 +48,27 @@ class _MyAppState extends State<MyApp> {
     String port = _portController.text.trim();
     String key = _keyController.text.trim();
 
-    if (name.isEmpty || server.isEmpty || port.isEmpty) {
-      _showErrorDialog(
-          "Faltan datos", "Por favor, rellena todos los campos obligatorios.");
+    if (server.isEmpty || port.isEmpty) {
+      _showMessage("Error", "Servidor y puerto son obligatorios.", true);
       return;
     }
 
-    setState(() {
-      isConnected = true;
-    });
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const Vista2(),
-      ),
+    final connection = Connection();
+    connection.connect(
+      server: server,
+      port: port,
+      key: key,
+      onError: (error) {
+        _showMessage("Error de conexión", "No has pogut conectarte", true);
+      },
+      onSuccess: () {
+        setState(() {
+          isConnected = true;
+        });
+        _showMessage(
+            "Conexión exitosa", "Te has conectado correctamente.", false);
+        //CupertinoPageRoute(builder: (context) => menuconectado());
+      },
     );
   }
 
@@ -70,8 +79,8 @@ class _MyAppState extends State<MyApp> {
     String key = _keyController.text.trim();
 
     if (name.isEmpty || server.isEmpty || port.isEmpty) {
-      _showErrorDialog(
-          "Faltan datos", "Por favor, rellena todos los campos obligatorios.");
+      _showMessage("Faltan datos",
+          "Por favor, rellena todos los campos obligatorios.", true);
       return;
     }
 
@@ -79,13 +88,15 @@ class _MyAppState extends State<MyApp> {
 
     if (userDataList.any(
         (user) => user.name == newUser.name && user.server == newUser.server)) {
-      _showErrorDialog("Duplicado", "Este servidor ya está en favoritos.");
+      _showMessage("Duplicado", "Este servidor ya está en favoritos.", true);
       return;
     }
 
     userDataList.add(newUser);
     Storage.saveUserData(userDataList);
     _loadUserData();
+    _showMessage(
+        "Guardado", "El servidor se agregó a favoritos correctamente.", false);
   }
 
   void removeUserFromFavorites(int index) {
@@ -94,24 +105,12 @@ class _MyAppState extends State<MyApp> {
     _loadUserData();
   }
 
-  void _showErrorDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
+  // Función para mostrar el mensaje de éxito o error
+  void _showMessage(String title, String message, bool isError) {
+    setState(() {
+      _message = message;
+      _isError = isError;
+    });
   }
 
   @override
@@ -240,6 +239,21 @@ class _MyAppState extends State<MyApp> {
                                       ),
                                     ],
                                   ),
+                                  // Mostrar el mensaje debajo de los botones
+                                  if (_message != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 20),
+                                      child: Text(
+                                        _message!,
+                                        style: TextStyle(
+                                          color: _isError
+                                              ? Colors.red
+                                              : Colors.green,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -253,20 +267,6 @@ class _MyAppState extends State<MyApp> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class Vista2 extends StatelessWidget {
-  const Vista2({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Vista 2")),
-      body: const Center(
-        child: Text("Conectado al servidor"),
       ),
     );
   }
