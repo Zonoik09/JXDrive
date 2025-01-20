@@ -37,8 +37,11 @@ class UserData {
 
 class Storage {
   static Future<String> _getFilePath() async {
-    final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/JXDrive/user_data.json';
+    final directory = Directory('./data');
+    if (!directory.existsSync()) {
+      directory.createSync(recursive: true);
+    }
+    return '${directory.path}/user_data.json';
   }
 
   static Future<List<UserData>> loadUserData() async {

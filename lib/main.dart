@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jxdrive/SaveServer.dart';
-import 'package:jxdrive/connection.dart';
+import 'package:jxdrive/conection.dart';
 import 'mainCanvas.dart';
 
 void main() {
@@ -28,8 +28,8 @@ class _MyAppState extends State<MyApp> {
 
   bool isConnected = false;
   List<UserData> userDataList = [];
-  String? _message; // Mensaje de error o éxito
-  bool _isError = false; // Determina si el mensaje es un error o éxito
+  String? _message;
+  bool _isError = false;
 
   @override
   void initState() {
@@ -48,18 +48,26 @@ class _MyAppState extends State<MyApp> {
     String port = _portController.text.trim();
     String key = _keyController.text.trim();
 
+    if (name.isEmpty) {
+      _showMessage("Error", "El nombre es obligatorio.", true);
+      return;
+    }
+
     if (server.isEmpty || port.isEmpty) {
       _showMessage("Error", "Servidor y puerto son obligatorios.", true);
       return;
     }
+    print('(main connect) Ruta de la clave privada: ${_keyController.text}');
+    // Aquí creamos la cadena con el formato "nom@servidor"
+    String hostWithUsername = '$name@$server';
 
-    final connection = Connection();
+    final connection = SSHConnection();
     connection.connect(
-      server: server,
+      hostWithUsername: hostWithUsername,
       port: port,
-      key: key,
+      privateKeyPath: key,
       onError: (error) {
-        _showMessage("Error de conexión", "No has pogut conectarte", true);
+        _showMessage("Error de conexión", error, true);
       },
       onSuccess: () {
         setState(() {
@@ -222,6 +230,8 @@ class _MyAppState extends State<MyApp> {
                                       setState(() {
                                         _keyController.text = path;
                                       });
+                                      print(
+                                          '(main) Ruta de la clave seleccionada: $path');
                                     },
                                   ),
                                   const SizedBox(height: 50),

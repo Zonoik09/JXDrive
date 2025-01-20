@@ -61,11 +61,13 @@ class CustomTextFieldWidget extends StatelessWidget {
 
 class FilePickerFieldWidget extends StatefulWidget {
   final String labelText;
+  final Function(String path)
+      onFileSelected; // Define correctamente el callback
 
   const FilePickerFieldWidget({
     super.key,
     required this.labelText,
-    required Null Function(dynamic path) onFileSelected,
+    required this.onFileSelected, // Marca como requerido
   });
 
   @override
@@ -81,9 +83,14 @@ class _FilePickerFieldWidgetState extends State<FilePickerFieldWidget> {
       // Utilizar file_picker para seleccionar un archivo
       FilePickerResult? result = await FilePicker.platform.pickFiles();
       if (result != null) {
+        String? filePath = result.files.single.path;
         setState(() {
-          _controller.text = result.files.single.path ?? "";
+          _controller.text = filePath ?? "";
         });
+        // Llamar a la función proporcionada para notificar el archivo seleccionado
+        if (filePath != null) {
+          widget.onFileSelected(filePath);
+        }
       }
     } catch (e) {
       print("Error al seleccionar archivo: $e");
@@ -118,7 +125,7 @@ class _FilePickerFieldWidgetState extends State<FilePickerFieldWidget> {
               child: TextField(
                 controller: _controller,
                 focusNode: _focusNode,
-                readOnly: false,
+                readOnly: true, // El campo es solo lectura
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   hintText: "Selecciona un archivo...",
