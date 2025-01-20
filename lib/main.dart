@@ -58,7 +58,7 @@ class _MyAppState extends State<MyApp> {
       return;
     }
     print('(main connect) Ruta de la clave privada: ${_keyController.text}');
-    // Aquí creamos la cadena con el formato "nom@servidor"
+
     String hostWithUsername = '$name@$server';
 
     final connection = SSHConnection();
