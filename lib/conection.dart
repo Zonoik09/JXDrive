@@ -25,23 +25,19 @@ class SSHConnection {
       }
       final username = parts[0];
       final host = parts[1];
-      print('Se ha divido con exito');
 
+      // Verificar si la clave privada existe
       if (!File(privateKeyPath).existsSync()) {
         onError('La clave privada no existe en la ruta proporcionada.');
         print('Error: La clave privada no se encuentra en: $privateKeyPath');
         return;
-      } else {
-        print("Clave proporcionada");
       }
 
       // Leer la clave privada
       final privateKey = await File(privateKeyPath).readAsString();
-      print('Clave privada leída con éxito.');
 
-      // Crear un par de claves SSH
+      // Crear un par de claves SSH a partir de la clave privada
       final keyPair = SSHKeyPair.fromPem(privateKey);
-      print('Creado el par de claves SSH.');
 
       // Intentar conectar al servidor SSH
       final client = SSHClient(
