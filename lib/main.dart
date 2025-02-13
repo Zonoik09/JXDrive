@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jxdrive/mainCanvas.dart';
-import 'conection.dart'; // Asegúrate de que la clase ServerConnectionManager esté importada.
-import 'package:jxdrive/SaveServer.dart'; // Asegúrate de que la clase Storage esté correctamente implementada.
+import 'conection.dart';
+import 'package:jxdrive/SaveServer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Desactiva el banner de depuración
+      debugShowCheckedModeBanner: false,
       title: 'Conexión SSH',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -67,8 +67,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   void _connectToServer() async {
     final username = _usernameController.text.trim();
     final server = _serverController.text.trim();
-    final port = int.tryParse(_portController.text) ??
-        22; // Default to port 22 if not specified.
+    final port = int.tryParse(_portController.text) ?? 22;
     final privateKeyPath = _privateKeyController.text.trim();
 
     if (username.isEmpty || server.isEmpty || privateKeyPath.isEmpty) {
