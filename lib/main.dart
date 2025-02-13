@@ -1,35 +1,48 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:jxdrive/SaveServer.dart';
-import 'package:jxdrive/conection.dart';
-import 'mainCanvas.dart';
+import 'package:jxdrive/mainCanvas.dart';
+import 'conection.dart'; // Asegúrate de que la clase ServerConnectionManager esté importada.
+import 'package:jxdrive/SaveServer.dart'; // Asegúrate de que la clase Storage esté correctamente implementada.
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false, // Desactiva el banner de depuración
+      title: 'Conexión SSH',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const ConnectionScreen(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  final TextEditingController _nameController = TextEditingController();
+class ConnectionScreen extends StatefulWidget {
+  const ConnectionScreen({super.key});
+
+  @override
+  _ConnectionScreenState createState() => _ConnectionScreenState();
+}
+
+class _ConnectionScreenState extends State<ConnectionScreen> {
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _serverController = TextEditingController();
   final TextEditingController _portController = TextEditingController();
-  final TextEditingController _keyController = TextEditingController();
+  final TextEditingController _privateKeyController = TextEditingController();
 
-  final FocusNode _nameFocusNode = FocusNode();
+  String _statusMessage = '';
+  List<UserData> userDataList = [];
+
+  final FocusNode _usernameFocusNode = FocusNode();
   final FocusNode _serverFocusNode = FocusNode();
   final FocusNode _portFocusNode = FocusNode();
   final FocusNode _keyFocusNode = FocusNode();
-
-  bool isConnected = false;
-  List<UserData> userDataList = [];
-  String? _message;
-  bool _isError = false;
 
   @override
   void initState() {
@@ -42,53 +55,54 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
   }
 
-  void connect() {
-    String name = _nameController.text.trim();
-    String server = _serverController.text.trim();
-    String port = _portController.text.trim();
-    String key = _keyController.text.trim();
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _serverController.dispose();
+    _portController.dispose();
+    _privateKeyController.dispose();
+    super.dispose();
+  }
 
-    if (name.isEmpty) {
-      _showMessage("Error", "El nombre es obligatorio.", true);
+  void _connectToServer() async {
+    final username = _usernameController.text.trim();
+    final server = _serverController.text.trim();
+    final port = int.tryParse(_portController.text) ??
+        22; // Default to port 22 if not specified.
+    final privateKeyPath = _privateKeyController.text.trim();
+
+    if (username.isEmpty || server.isEmpty || privateKeyPath.isEmpty) {
+      setState(() {
+        _statusMessage = 'Por favor ingrese todos los campos.';
+      });
       return;
     }
 
-    if (server.isEmpty || port.isEmpty) {
-      _showMessage("Error", "Servidor y puerto son obligatorios.", true);
-      return;
+    try {
+      ServerConnectionManager()
+          .setConnection(username, server, port, privateKeyPath);
+      await ServerConnectionManager().connect();
+      setState(() {
+        _statusMessage = 'Conexión exitosa a $server en el puerto $port';
+      });
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error al conectar: $e';
+      });
     }
-    print('(main connect) Ruta de la clave privada: ${_keyController.text}');
-
-    String hostWithUsername = '$name@$server';
-
-    final connection = SSHConnection();
-    connection.connect(
-      hostWithUsername: hostWithUsername,
-      port: port,
-      privateKeyPath: key,
-      onError: (error) {
-        _showMessage("Error de conexión", error, true);
-      },
-      onSuccess: () {
-        setState(() {
-          isConnected = true;
-        });
-        _showMessage(
-            "Conexión exitosa", "Te has conectado correctamente.", false);
-        //CupertinoPageRoute(builder: (context) => menuconectado());
-      },
-    );
   }
 
   void addUserToFavorites() {
-    String name = _nameController.text.trim();
+    String name = _usernameController.text.trim();
     String server = _serverController.text.trim();
     String port = _portController.text.trim();
-    String key = _keyController.text.trim();
+    String key = _privateKeyController.text.trim();
 
     if (name.isEmpty || server.isEmpty || port.isEmpty) {
-      _showMessage("Faltan datos",
-          "Por favor, rellena todos los campos obligatorios.", true);
+      setState(() {
+        _statusMessage =
+            "Faltan datos, por favor rellena todos los campos obligatorios.";
+      });
       return;
     }
 
@@ -96,15 +110,18 @@ class _MyAppState extends State<MyApp> {
 
     if (userDataList.any(
         (user) => user.name == newUser.name && user.server == newUser.server)) {
-      _showMessage("Duplicado", "Este servidor ya está en favoritos.", true);
+      setState(() {
+        _statusMessage = "Este servidor ya está en favoritos.";
+      });
       return;
     }
 
     userDataList.add(newUser);
     Storage.saveUserData(userDataList);
     _loadUserData();
-    _showMessage(
-        "Guardado", "El servidor se agregó a favoritos correctamente.", false);
+    setState(() {
+      _statusMessage = "Servidor agregado a favoritos.";
+    });
   }
 
   void removeUserFromFavorites(int index) {
@@ -113,169 +130,153 @@ class _MyAppState extends State<MyApp> {
     _loadUserData();
   }
 
-  // Función para mostrar el mensaje de éxito o error
-  void _showMessage(String title, String message, bool isError) {
-    setState(() {
-      _message = message;
-      _isError = isError;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Column(
-            children: [
-              Expanded(
-                child: Row(
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // SERVIDORES FAVORITOS
+            Expanded(
+              flex: 1,
+              child: Container(
+                color: const Color(0xFFF9F2FA),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        color: const Color(0xFFF9F2FA),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 10),
-                              child: Text(
-                                "SERVIDORS FAVORITS",
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: userDataList.length,
-                                itemBuilder: (context, index) {
-                                  final user = userDataList[index];
-                                  return ListTile(
-                                    title: Text(user.name),
-                                    subtitle:
-                                        Text('${user.server}:${user.port}'),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () =>
-                                          removeUserFromFavorites(index),
-                                    ),
-                                    onTap: () {
-                                      setState(() {
-                                        _nameController.text = user.name;
-                                        _serverController.text = user.server;
-                                        _portController.text = user.port;
-                                        _keyController.text = user.key;
-                                      });
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Text(
+                        "SERVIDORES FAVORITOS",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    Container(
-                      width: 3,
-                      color: Colors.black,
-                    ),
                     Expanded(
-                      flex: 3,
-                      child: Container(
-                        color: Colors.white,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 10, left: 40),
-                              child: Text(
-                                "CONFIGURACIÓ SSH",
-                                style: TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                      child: ListView.builder(
+                        itemCount: userDataList.length,
+                        itemBuilder: (context, index) {
+                          final user = userDataList[index];
+                          return ListTile(
+                            title: Text(user.name),
+                            subtitle: Text('${user.server}:${user.port}'),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => removeUserFromFavorites(index),
                             ),
-                            const SizedBox(height: 80),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 160.0),
-                              child: Column(
-                                children: [
-                                  CustomTextFieldWidget(
-                                    labelText: "Nom:",
-                                    controller: _nameController,
-                                    focusNode: _nameFocusNode,
-                                  ),
-                                  const SizedBox(height: 30),
-                                  CustomTextFieldWidget(
-                                    labelText: "Servidor:",
-                                    controller: _serverController,
-                                    focusNode: _serverFocusNode,
-                                  ),
-                                  const SizedBox(height: 30),
-                                  CustomTextFieldWidget(
-                                    labelText: "Port:",
-                                    controller: _portController,
-                                    focusNode: _portFocusNode,
-                                  ),
-                                  const SizedBox(height: 30),
-                                  FilePickerFieldWidget(
-                                    labelText: "Clau:",
-                                    onFileSelected: (path) {
-                                      setState(() {
-                                        _keyController.text = path;
-                                      });
-                                      print(
-                                          '(main) Ruta de la clave seleccionada: $path');
-                                    },
-                                  ),
-                                  const SizedBox(height: 50),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      CustomButton(
-                                        label: "Afegir a favorits",
-                                        onPressed: addUserToFavorites,
-                                      ),
-                                      const SizedBox(width: 20),
-                                      CustomButton(
-                                        label: "Conectar",
-                                        onPressed: connect,
-                                      ),
-                                    ],
-                                  ),
-                                  // Mostrar el mensaje debajo de los botones
-                                  if (_message != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 20),
-                                      child: Text(
-                                        _message!,
-                                        style: TextStyle(
-                                          color: _isError
-                                              ? Colors.red
-                                              : Colors.green,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                            onTap: () {
+                              setState(() {
+                                _usernameController.text = user.name;
+                                _serverController.text = user.server;
+                                _portController.text = user.port;
+                                _privateKeyController.text = user.key;
+                              });
+                            },
+                          );
+                        },
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Container(
+              width: 3,
+              color: Colors.black,
+            ),
+            // CONFIGURACIÓN SSH
+            Expanded(
+              flex: 3,
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10, left: 40),
+                      child: Text(
+                        "CONFIGURACIÓN SSH",
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 80),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 160.0),
+                      child: Column(
+                        children: [
+                          CustomTextFieldWidget(
+                            labelText: "Nom:",
+                            controller: _usernameController,
+                            focusNode: _usernameFocusNode,
+                          ),
+                          const SizedBox(height: 30),
+                          CustomTextFieldWidget(
+                            labelText: "Servidor:",
+                            controller: _serverController,
+                            focusNode: _serverFocusNode,
+                          ),
+                          const SizedBox(height: 30),
+                          CustomTextFieldWidget(
+                            labelText: "Port:",
+                            controller: _portController,
+                            focusNode: _portFocusNode,
+                          ),
+                          const SizedBox(height: 30),
+                          FilePickerFieldWidget(
+                            labelText: "Clau:",
+                            onFileSelected: (path) {
+                              setState(() {
+                                _privateKeyController.text = path;
+                              });
+                              print(
+                                  '(main) Ruta de la clave seleccionada: $path');
+                            },
+                          ),
+                          const SizedBox(height: 50),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CustomButton(
+                                label: "Afegir a favorits",
+                                onPressed: addUserToFavorites,
+                              ),
+                              const SizedBox(width: 20),
+                              CustomButton(
+                                label: "Conectar",
+                                onPressed: _connectToServer,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          // Mensaje de estado
+                          if (_statusMessage.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Text(
+                                _statusMessage,
+                                style: TextStyle(
+                                  color: _statusMessage.startsWith('Error')
+                                      ? Colors.red
+                                      : Colors.green,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
