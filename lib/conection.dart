@@ -27,8 +27,6 @@ class ServerConnectionManager {
     _currentPrivateKeyPath = privateKeyPath;
 
     print("Connection details set:");
-    print(
-        "Username: $_currentUsername, Server: $_currentServer, Port: $_currentPort");
   }
 
   Future<void> connect() async {
@@ -52,7 +50,8 @@ class ServerConnectionManager {
         ],
       );
 
-      print("Successfully connected to $_currentServer on port $_currentPort.");
+      print(
+          "Te has conectado correctamente al servidor $_currentServer:$_currentPort.");
     } catch (e) {
       print("Error while connecting: $e");
       throw Exception("Failed to connect to the SSH server: $e");
@@ -66,10 +65,8 @@ class ServerConnectionManager {
     }
 
     try {
-      print(command);
       final result = await _sshClient!.run(command);
       final output = utf8.decode(result);
-      print("Command output: $output");
       return output;
     } catch (e) {
       print("Error while executing command: $e");
