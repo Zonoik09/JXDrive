@@ -80,9 +80,10 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   try {
-    ServerConnectionManager()
-        .setConnection(username, server, port, privateKeyPath);
-    await ServerConnectionManager().connect();
+    final connection = ServerConnectionManager();
+    connection.setConnection(username, server, port, privateKeyPath);
+    await connection.connect();
+
 
     setState(() {
       _statusMessage = 'Conexión exitosa a $server en el puerto $port';
@@ -91,7 +92,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     // Navegar a menuConectado después de conectarse
     Navigator.push(
   context,
-  MaterialPageRoute(builder: (context) => menuconectado()),
+  MaterialPageRoute(builder: (context) => MenuConectado(connection: connection)),
 );
 
 

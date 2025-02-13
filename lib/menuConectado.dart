@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jxdrive/menuArchivos.dart';
+import 'package:jxdrive/conection.dart'; // Importar la clase de conexión
 
-class menuconectado extends StatelessWidget {
-  const menuconectado({super.key});
+class MenuConectado extends StatelessWidget {
+  final ServerConnectionManager connection; // Recibe la conexión SSH
+
+  const MenuConectado({super.key, required this.connection});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +38,6 @@ class menuconectado extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // La columna principal
           Container(
             width: large,
             child: Column(
@@ -46,11 +48,9 @@ class menuconectado extends StatelessWidget {
                     child: Material(
                       child: Row(
                         children: [
-                          Expanded(
-                            child: MyList(),
-                          ),
+                          Expanded(child: MyList()),
                           Container(
-                            width: 2, // Ancho de la línea
+                            width: 2,
                             color: Colors.black,
                             margin: const EdgeInsets.symmetric(horizontal: 8),
                           ),
@@ -62,32 +62,29 @@ class menuconectado extends StatelessWidget {
               ],
             ),
           ),
-          // La subvista Menuarchivos
           Expanded(
-            child: MenuArchivos(),
+            child: MenuArchivos(connection: connection), // Pasar conexión SSH
           ),
         ],
       ),
     );
   }
 }
-
 class MyList extends StatelessWidget {
   const MyList({super.key});
 
   @override
   Widget build(BuildContext context) {
     final elementos = ['Recientes', 'Carpetas', 'Eliminados'];
-    final items = elementos;
 
     return ListView.builder(
-      itemCount: items.length,
+      itemCount: elementos.length,
       itemBuilder: (context, index) {
         return ListTile(
-          title: Text(items[index]),
+          title: Text(elementos[index]),
           hoverColor: const Color.fromARGB(255, 235, 215, 238),
           onTap: () {
-            print('object');
+            print('Seleccionado: ${elementos[index]}');
           },
         );
       },
