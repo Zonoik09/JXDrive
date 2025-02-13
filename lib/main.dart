@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jxdrive/mainCanvas.dart';
 import 'conection.dart';
 import 'package:jxdrive/SaveServer.dart';
+import 'package:jxdrive/menuConectado.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -65,31 +67,41 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   void _connectToServer() async {
-    final username = _usernameController.text.trim();
-    final server = _serverController.text.trim();
-    final port = int.tryParse(_portController.text) ?? 22;
-    final privateKeyPath = _privateKeyController.text.trim();
+  final username = _usernameController.text.trim();
+  final server = _serverController.text.trim();
+  final port = int.tryParse(_portController.text) ?? 22;
+  final privateKeyPath = _privateKeyController.text.trim();
 
-    if (username.isEmpty || server.isEmpty || privateKeyPath.isEmpty) {
-      setState(() {
-        _statusMessage = 'Por favor ingrese todos los campos.';
-      });
-      return;
-    }
-
-    try {
-      ServerConnectionManager()
-          .setConnection(username, server, port, privateKeyPath);
-      await ServerConnectionManager().connect();
-      setState(() {
-        _statusMessage = 'Conexión exitosa a $server en el puerto $port';
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Error al conectar: $e';
-      });
-    }
+  if (username.isEmpty || server.isEmpty || privateKeyPath.isEmpty) {
+    setState(() {
+      _statusMessage = 'Por favor ingrese todos los campos.';
+    });
+    return;
   }
+
+  try {
+    ServerConnectionManager()
+        .setConnection(username, server, port, privateKeyPath);
+    await ServerConnectionManager().connect();
+
+    setState(() {
+      _statusMessage = 'Conexión exitosa a $server en el puerto $port';
+    });
+
+    // Navegar a menuConectado después de conectarse
+    Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => menuconectado()),
+);
+
+
+  } catch (e) {
+    setState(() {
+      _statusMessage = 'Error al conectar: $e';
+    });
+  }
+}
+
 
   void addUserToFavorites() {
     String name = _usernameController.text.trim();
