@@ -179,7 +179,7 @@ class ServerConnectionManager {
   Future<String> startServer(String serverPath, String serverType) async {
     try {
       final command = '''
-    cd $serverPath/server
+    cd $serverPath
 
     # Instalar dependencias para Node.js si es necesario
     if [ "$serverType" = "node" ]; then
@@ -188,7 +188,7 @@ class ServerConnectionManager {
 
     # Iniciar el servidor
     if [ "$serverType" = "node" ]; then
-      nohup node app.js > output.log 2>&1 &
+      nohup node server.js > output.log 2>&1 &
     elif [ "$serverType" = "java" ]; then
       nohup java -jar server.jar > output.log 2>&1 &
     fi

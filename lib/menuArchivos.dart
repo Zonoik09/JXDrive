@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:jxdrive/ServerControlWidget.dart';
 import 'package:jxdrive/conection.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:jxdrive/widgetRedirect.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 class MenuArchivos extends StatefulWidget {
   final ServerConnectionManager connection;
@@ -17,6 +20,7 @@ class MenuArchivosState extends State<MenuArchivos> {
   String currentPath = "/";
   List<Map<String, String>> files = [];
   Map<int, bool> hoverStates = {};
+  bool _isServerDetected = false;
 
   @override
   void initState() {
@@ -26,7 +30,8 @@ class MenuArchivosState extends State<MenuArchivos> {
 
   void _listFiles() async {
     try {
-      List<Map<String, String>> remoteFiles = await widget.connection.listFiles(currentPath);
+      List<Map<String, String>> remoteFiles =
+          await widget.connection.listFiles(currentPath);
       setState(() {
         files = remoteFiles;
         hoverStates = {for (int i = 0; i < files.length; i++) i: false};
@@ -44,14 +49,31 @@ class MenuArchivosState extends State<MenuArchivos> {
       });
     }
   }
+
   void listFiles() {
     _listFiles();
   }
+
   void _goBack() {
-    if (currentPath != "/") {
-      String parentPath = currentPath.substring(0, currentPath.lastIndexOf("/"));
-      if (parentPath.isEmpty) parentPath = "/";
-      _changeDirectory(parentPath);
+    // Normaliza la ruta asegurando que usa '/'
+    String normalizedPath = currentPath.replaceAll('\\', '/');
+
+    print("Ruta actual antes de retroceder: $normalizedPath");
+
+    if (normalizedPath != "/") {
+      String parentPath = p.posix.dirname(normalizedPath);
+
+      // Asegurar que la raíz sea '/' y no quede vacía
+      if (parentPath == "." || parentPath.isEmpty) {
+        parentPath = "/";
+      }
+
+      print("Retrocediendo a: $parentPath");
+
+      setState(() {
+        currentPath = parentPath;
+        _listFiles();
+      });
     }
   }
 
@@ -94,6 +116,16 @@ class MenuArchivosState extends State<MenuArchivos> {
     }
   }
 
+  Future<bool> isServerRunning() async {
+    try {
+      final result = await widget.connection
+          .executeCommand("ps aux | grep 'node\\|java' | grep -v grep");
+      return result.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,52 +147,80 @@ class MenuArchivosState extends State<MenuArchivos> {
           ),
         ],
       ),
-      body: files.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: files.length,
-              itemBuilder: (context, index) {
-                String name = files[index]["name"] ?? "Desconocido";
-                bool isDirectory = files[index]["type"] == "directory";
+      body: Column(
+        children: [
+          // Widget para controlar el servidor si hay uno en la carpeta
+          ServerControlWidget(
+            serverPath: currentPath,
+            connectionManager: widget.connection,
+            onServerStateChanged: (serverInfo) async {
+              bool isRunning = await isServerRunning();
+              setState(() {
+                _isServerDetected = isRunning;
+              });
+            },
+          ),
+          if (_isServerDetected)
+            PortRedirectWidget(connection: widget.connection),
+          Expanded(
+            // <--- Corrección: "Expanded" con mayúscula
+            child: files.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: files.length,
+                    itemBuilder: (context, index) {
+                      String name = files[index]["name"] ?? "Desconocido";
+                      bool isDirectory = files[index]["type"] == "directory";
 
-                return MouseRegion(
-                  onEnter: (_) => setState(() => hoverStates[index] = true),
-                  onExit: (_) => setState(() => hoverStates[index] = false),
-                  child: Container(
-                    color: hoverStates[index] ?? false ? Colors.grey.shade200 : Colors.transparent,
-                    child: ListTile(
-                      leading: Icon(
-                        isDirectory ? Icons.folder : Icons.insert_drive_file,
-                        color: isDirectory ? Colors.blue : Colors.grey,
-                      ),
-                      title: Text(
-                        name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      onTap: isDirectory ? () => _changeDirectory("$currentPath/$name") : null,
-                      trailing: hoverStates[index] ?? false
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (!isDirectory) ...[
-                                  IconButton(
-                                    icon: const Icon(Icons.download),
-                                    onPressed: () => _downloadFile(name),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () => _deleteFile(name),
-                                  ),
-                                ],
-                              ],
-                            )
-                          : null,
-                    ),
+                      return MouseRegion(
+                        onEnter: (_) =>
+                            setState(() => hoverStates[index] = true),
+                        onExit: (_) =>
+                            setState(() => hoverStates[index] = false),
+                        child: Container(
+                          color: hoverStates[index] ?? false
+                              ? Colors.grey.shade200
+                              : Colors.transparent,
+                          child: ListTile(
+                            leading: Icon(
+                              isDirectory
+                                  ? Icons.folder
+                                  : Icons.insert_drive_file,
+                              color: isDirectory ? Colors.blue : Colors.grey,
+                            ),
+                            title: Text(
+                              name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            onTap: isDirectory
+                                ? () => _changeDirectory("$currentPath/$name")
+                                : null,
+                            trailing: hoverStates[index] ?? false
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!isDirectory) ...[
+                                        IconButton(
+                                          icon: const Icon(Icons.download),
+                                          onPressed: () => _downloadFile(name),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          onPressed: () => _deleteFile(name),
+                                        ),
+                                      ],
+                                    ],
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
     );
   }
 }
-  

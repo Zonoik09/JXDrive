@@ -193,7 +193,7 @@ class StatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: const Size(12, 12), // Tamaño más pequeño
+      size: const Size(12, 12),
       painter: StatusPainter(_getStatusColor()),
     );
   }
@@ -210,7 +210,6 @@ class StatusPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    // Dibuja un círculo más pequeño
     canvas.drawCircle(size.center(Offset.zero), size.width, paint);
   }
 
