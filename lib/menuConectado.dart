@@ -1,38 +1,49 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jxdrive/menuArchivos.dart';
-import 'package:jxdrive/conection.dart'; // Importar la clase de conexión
+import 'package:jxdrive/conection.dart';
 
-class MenuConectado extends StatelessWidget {
-  final ServerConnectionManager connection; // Recibe la conexión SSH
+class MenuConectado extends StatefulWidget {
+  final ServerConnectionManager connection;
 
   const MenuConectado({super.key, required this.connection});
 
   @override
+  State<MenuConectado> createState() => _MenuConectadoState();
+}
+
+class _MenuConectadoState extends State<MenuConectado> {
+  final GlobalKey<MenuArchivosState> _menuArchivosKey = GlobalKey(); // Permite acceder al estado
+
+  void _reloadPage() {
+    _menuArchivosKey.currentState?.listFiles(); // Recarga archivos sin cambiar de ruta
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final double topPadding =
-        MediaQuery.of(context).padding.top + kMinInteractiveDimensionCupertino;
     final double large = MediaQuery.of(context).size.width / 4;
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        leading: Text('JXDrive'),
+      navigationBar: CupertinoNavigationBar(
+        leading: const Text('JXDrive'),
         border: null,
         backgroundColor: Colors.white,
-        trailing: SizedBox(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton(
-                onPressed: null,
-                child: Icon(CupertinoIcons.power),
-              ),
-              ElevatedButton(
-                onPressed: null,
-                child: Icon(CupertinoIcons.arrow_clockwise),
-              ),
-            ],
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: const Icon(CupertinoIcons.power, color: Colors.black),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _reloadPage,
+              child: const Icon(CupertinoIcons.arrow_clockwise, color: Colors.black),
+            ),
+          ],
         ),
       ),
       child: Row(
@@ -48,7 +59,7 @@ class MenuConectado extends StatelessWidget {
                     child: Material(
                       child: Row(
                         children: [
-                          Expanded(child: MyList()),
+                          const Expanded(child: MyList()),
                           Container(
                             width: 2,
                             color: Colors.black,
@@ -63,13 +74,15 @@ class MenuConectado extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: MenuArchivos(connection: connection), // Pasar conexión SSH
+            child: MenuArchivos(key: _menuArchivosKey, connection: widget.connection),
           ),
         ],
       ),
     );
   }
 }
+
+
 class MyList extends StatelessWidget {
   const MyList({super.key});
 
