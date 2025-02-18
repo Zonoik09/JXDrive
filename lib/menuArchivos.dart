@@ -122,9 +122,10 @@ class MenuArchivosState extends State<MenuArchivos> {
           .executeCommand("ps aux | grep 'node\\|java' | grep -v grep");
       return result.isNotEmpty;
     } catch (e) {
+      print("Error verificando el servidor: $e");
       return false;
     }
-  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +156,11 @@ class MenuArchivosState extends State<MenuArchivos> {
             connectionManager: widget.connection,
             onServerStateChanged: (serverInfo) async {
               bool isRunning = await isServerRunning();
+              
               setState(() {
                 _isServerDetected = isRunning;
               });
+              print('$_isServerDetected');
             },
           ),
           if (_isServerDetected)
@@ -206,6 +209,10 @@ class MenuArchivosState extends State<MenuArchivos> {
                                           onPressed: () => _downloadFile(name),
                                         ),
                                         IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () => _renameFile(name),
+                                        ),
+                                        IconButton(
                                           icon: const Icon(Icons.delete),
                                           onPressed: () => _deleteFile(name),
                                         ),
@@ -223,4 +230,43 @@ class MenuArchivosState extends State<MenuArchivos> {
       ),
     );
   }
+  Future<void> _renameFile(String oldName) async {
+  TextEditingController _controller = TextEditingController(text: oldName);
+
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Cambiar nombre"),
+        content: TextField(
+          controller: _controller,
+          decoration: const InputDecoration(labelText: "Nuevo nombre"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () async {
+              String newName = _controller.text.trim();
+              if (newName.isNotEmpty && newName != oldName) {
+                try {
+                  await widget.connection.renameFile(
+                      "$currentPath/$oldName", "$currentPath/$newName");
+                  _listFiles(); // Refrescar la lista
+                } catch (e) {
+                  print("Error al renombrar: $e");
+                }
+              }
+              Navigator.of(context).pop();
+            },
+            child: const Text("Aceptar"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 }
